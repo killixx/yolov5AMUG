@@ -118,7 +118,7 @@ def run(
     for path, im, im0s, vid_cap, s in dataset:
        
         print('doing blackwhite')
-        gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) 
+        gray = cv2.cvtColor(im0s, cv2.COLOR_BGR2GRAY) 
         print('done blackwhite')
         
         print('doing binary')

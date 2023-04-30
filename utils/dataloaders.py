@@ -224,6 +224,23 @@ class LoadScreenshots:
     def __next__(self):
         # mss screen capture: get raw pixels from the screen as np array
         im0 = np.array(self.sct.grab(self.monitor))[:, :, :3]  # [:, :, :3] BGRA to BGR
+        print('doing blackwhite')
+        gray = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY) 
+        print('done blackwhite')
+        
+        print('doing binary')
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        print('done binary')
+        
+        print('doing erosion')
+        kernel = np.ones((3,3),np.uint8)
+        erosion = cv2.erode(binary,kernel,iterations = 1)
+        print('done erosion')
+        
+        print('doing denoised')
+        im0 = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
+        print('done denoised')
+
         s = f'screen {self.screen} (LTWH): {self.left},{self.top},{self.width},{self.height}: '
 
         if self.transforms:
@@ -296,6 +313,22 @@ class LoadImages:
                 path = self.files[self.count]
                 self._new_video(path)
                 ret_val, im0 = self.cap.read()
+                print('doing blackwhite')
+                gray = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY) 
+                print('done blackwhite')
+        
+                print('doing binary')
+                _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                print('done binary')
+        
+                print('doing erosion')
+                kernel = np.ones((3,3),np.uint8)
+                erosion = cv2.erode(binary,kernel,iterations = 1)
+                print('done erosion')
+                
+                print('doing denoised')
+                im0 = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
+                print('done denoised')
 
             self.frame += 1
             # im0 = self._cv2_rotate(im0)  # for use if cv2 autorotation is False
@@ -305,6 +338,22 @@ class LoadImages:
             # Read image
             self.count += 1
             im0 = cv2.imread(path)  # BGR
+            print('doing blackwhite')
+            gray = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY) 
+            print('done blackwhite')
+            
+            print('doing binary')
+            _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            print('done binary')
+            
+            print('doing erosion')
+            kernel = np.ones((3,3),np.uint8)
+            erosion = cv2.erode(binary,kernel,iterations = 1)
+            print('done erosion')
+            
+            print('doing denoised')
+            im0 = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
+            print('done denoised')
             assert im0 is not None, f'Image Not Found {path}'
             s = f'image {self.count}/{self.nf} {path}: '
 
@@ -412,6 +461,22 @@ class LoadStreams:
             raise StopIteration
 
         im0 = self.imgs.copy()
+        print('doing blackwhite')
+        gray = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY) 
+        print('done blackwhite')
+        
+        print('doing binary')
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        print('done binary')
+        
+        print('doing erosion')
+        kernel = np.ones((3,3),np.uint8)
+        erosion = cv2.erode(binary,kernel,iterations = 1)
+        print('done erosion')
+        
+        print('doing denoised')
+        im0 = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
+        print('done denoised')
         if self.transforms:
             im = np.stack([self.transforms(x) for x in im0])  # transforms
         else:

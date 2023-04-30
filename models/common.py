@@ -504,7 +504,8 @@ class DetectMultiBackend(nn.Module):
 
     def forward(self, im, augment=False, visualize=False):
         # YOLOv5 MultiBackend inference
-        h, w = im.shape  # batch, channel, height, width
+        h = im.shape[0]
+        w = im.shape[1]  # batch, channel, height, width
         if self.fp16 and im.dtype != torch.float16:
             im = im.half()  # to FP16
         if self.nhwc:

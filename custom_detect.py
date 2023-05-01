@@ -33,7 +33,6 @@ import os
 import platform
 import sys
 from pathlib import Path
-import numpy as np
 
 import torch
 
@@ -116,24 +115,8 @@ def run(
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
     for path, im, im0s, vid_cap, s in dataset:
-       
-        print('doing blackwhite')
-        gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) 
-        print('done blackwhite')
-        
-        print('doing binary')
-        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        print('done binary')
-        
-        print('doing erosion')
-        kernel = np.ones((3,3),np.uint8)
-        erosion = cv2.erode(binary,kernel,iterations = 1)
-        print('done erosion')
-        
-        print('doing denoised')
-        im = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
-        print('done denoised')
-
+        print('im=',type(im))
+        print('im0s=',type(im0s))
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32

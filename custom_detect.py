@@ -177,7 +177,7 @@ def run(
                     kernel = np.ones((3,3),np.uint8)
                     erosion = cv2.erode(binary,kernel,iterations = 1)
                     denoised = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
-                    cv2.imwrite('/content/drive/MyDrive/images/cropped.png', denoised)
+                    cv2.imwrite('/content/drive/MyDrive/images/ crops/names[c]/f{p.stem}.png', denoised)
 
             # Stream results
             im0 = annotator.result()

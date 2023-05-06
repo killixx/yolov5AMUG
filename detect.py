@@ -33,6 +33,7 @@ import os
 import platform
 import sys
 from pathlib import Path
+from models.yolo import DetectionModel
 
 import torch
 
@@ -187,7 +188,7 @@ def run(
             # Save results (image with detections)
             if save_img:
                 if dataset.mode == 'image':
-                    for det in detections:
+                    for det in DetectionModel:
                         if det[-1] in class_dict.keys():
                             class_name = class_dict[det[-1]]
                             if class_name not in class_folder_dict.keys():

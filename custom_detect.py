@@ -166,7 +166,7 @@ def run(
                         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
                         with open(f'{txt_path}.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
-                    save_dir = '/path/to/output/directory'
+                    save_dir = '/content/drive/MyDrive/images'
                     if save_crop:
                          save_path = save_dir + '/' + p.stem + '_crop.jpg'
                          cv2.imwrite(save_path, crop)                    

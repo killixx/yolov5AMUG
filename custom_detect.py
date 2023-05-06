@@ -33,6 +33,7 @@ import os
 import platform
 import sys
 from pathlib import Path
+import numpy as np
 
 import torch
 
@@ -166,20 +167,17 @@ def run(
                         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
                         with open(f'{txt_path}.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
-                    save_dir = Path('/content/drive/MyDrive/AMUG/Crop/')
-                    p_name = Path(p.name)
-                    save_path = str(save_dir / p_name)
-                    if save_crop:
-                         save_path = save_dir + '/' + p.stem + '_crop.jpg'
-                         cv2.imwrite(save_path, crop)                    
-                    #img = cv2.imread(save_crop)
-                    #cv2.imwrite(save_path + 'processed_image.png', img)
                     if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                         annotator.box_label(xyxy, label, color=colors(c, True))
-                    if save_crop:
-                        save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                    crop=save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True , save = False)
+                    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+                    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                    kernel = np.ones((3,3),np.uint8)
+                    erosion = cv2.erode(binary,kernel,iterations = 1)
+                    denoised = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
+                    cv2.imwrite('/content/drive/MyDrive/images/cropped.png', denoised)
 
             # Stream results
             im0 = annotator.result()

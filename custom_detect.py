@@ -172,7 +172,7 @@ def run(
                          cv2.imwrite(save_path, crop)                    
                     #img = cv2.imread(save_crop)
                     #cv2.imwrite(save_path + 'processed_image.png', img)
-                    #if save_img or save_crop or view_img:  # Add bbox to image
+                    if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                         annotator.box_label(xyxy, label, color=colors(c, True))

@@ -187,6 +187,18 @@ def run(
             # Save results (image with detections)
             if save_img:
                 if dataset.mode == 'image':
+                    for det in detections:
+                        if det[-1] in class_dict.keys():
+                            class_name = class_dict[det[-1]]
+                            if class_name not in class_folder_dict.keys():
+                                folder_id = create_folder_in_drive(drive_service, class_name, folder_id)
+                                class_folder_dict[class_name] = folder_id
+        
+                        x1y1 = tuple(map(int, det[0:2]))
+                        x2y2 = tuple(map(int, det[2:4]))
+                        cropped_im = im0[x1y1[1]:x2y2[1], x1y1[0]:x2y2[0]]
+                        save_path = f"drive:{class_folder_dict[class_name]}/{img_name}_{det[-1]}.jpg"
+                        cv2.imwrite(save_path, cropped_im)
                     cv2.imwrite(save_path, im0)
                 else:  # 'video' or 'stream'
                     if vid_path[i] != save_path:  # new video

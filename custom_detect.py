@@ -180,7 +180,6 @@ def run(
                     cv2.imwrite(f'/content/drive/MyDrive/images/crop{p.stem}.png', denoised)
 
             # Stream results
-            im0 = annotator.result()
             if view_img:
                 if platform.system() == 'Linux' and p not in windows:
                     windows.append(p)

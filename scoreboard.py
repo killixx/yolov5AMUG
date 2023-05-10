@@ -113,6 +113,7 @@ def run(
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
     vid_path, vid_writer = [None] * bs, [None] * bs
 
+
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
@@ -259,6 +260,80 @@ def parse_opt():
 def main(opt):
     check_requirements(exclude=('tensorboard', 'thop'))
     run(**vars(opt))
+
+def frame_processing(model,dt,save_dir,path,augment,conf_thres,iou_thres,classes, agnostic_nms,max_det,webcam,im0s,dataset,line_thickness,save_crop,hide_conf,hide_labels,save_txt,save_img,save_conf,view_img,names,windows):
+    with dt[0]:
+        im = torch.from_numpy(im).to(model.device)
+        im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
+        im /= 255  # 0 - 255 to 0.0 - 1.0
+        if len(im.shape) == 3:
+            im = im[None]  # expand for batch dim
+
+    # Inference
+    with dt[1]:
+        visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
+        pred = model(im, augment=augment, visualize=visualize)
+
+    # NMS
+    with dt[2]:
+        pred = non_max_suppression(pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
+
+    # Second-stage classifier (optional)
+    # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
+
+    # Process predictions
+    for i, det in enumerate(pred):  # per image
+        seen += 1
+        if webcam:  # batch_size >= 1
+            p, im0, frame = path[i], im0s[i].copy(), dataset.count
+            s += f'{i}: '
+        else:
+            p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
+
+        p = Path(p)  # to Path
+        save_path = str(save_dir / p.name)  # im.jpg
+        txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # im.txt
+        s += '%gx%g ' % im.shape[2:]  # print string
+        gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+        imc = im0.copy() if save_crop else im0  # for save_crop
+        annotator = Annotator(im0, line_width=line_thickness,example="")
+        if len(det):
+            # Rescale boxes from img_size to im0 size
+            det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
+
+            # Print results
+            for c in det[:, 5].unique():
+                n = (det[:, 5] == c).sum()  # detections per class
+                s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
+
+            # Write results
+            for *xyxy, conf, cls in reversed(det):
+                if save_txt:  # Write to file
+                    xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                    line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
+                    with open(f'{txt_path}.txt', 'a') as f:
+                        f.write(('%g ' * len(line)).rstrip() % line + '\n')
+                if save_img or save_crop or view_img:  # Add bbox to image
+                    c = int(cls)  # integer class
+                    label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
+                    annotator.box_label(xyxy,"", color=colors(c, True))
+                crop=save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True , save = False)
+                gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+                _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                kernel = np.ones((3,3),np.uint8)
+                erosion = cv2.erode(binary,kernel,iterations = 1)
+                denoised = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
+                cv2.imwrite(f'/content/drive/MyDrive/images/crop{p.stem}.png', denoised)
+
+        # Stream results
+        if view_img:
+            if platform.system() == 'Linux' and p not in windows:
+                windows.append(p)
+                cv2.namedWindow(str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
+                cv2.resizeWindow(str(p), im0.shape[1], im0.shape[0])
+            cv2.imshow(str(p), im0)
+            cv2.waitKey(1)  # 1 millisecond
+    
 
 
 if __name__ == '__main__':

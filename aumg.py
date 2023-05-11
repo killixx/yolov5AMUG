@@ -5,6 +5,8 @@ import platform
 import sys
 from pathlib import Path
 import numpy as np
+from scoreboard import frame_processing
+from regex import regex_processing
 
 import torch
 
@@ -87,5 +89,20 @@ def run(
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
+
+    # List of input frames
+input_frames = ['frame1.jpg', 'frame2.jpg', 'frame3.jpg']
+
+# Loop through input frames
+for frame in input_frames:
+    # Call frame_processing function to detect and extract scoreboard
+    output_im, ratio, (xyxy, labels, scores) = frame_processing(frame)
+
+    # Call regex_processing function to extract information from scoreboard
+    scoreboard_info = regex_processing(output_im, xyxy)
+
+    # Save result
+    with open(f'{frame}_info.txt', 'w') as f:
+        f.write(scoreboard_info)
 
     

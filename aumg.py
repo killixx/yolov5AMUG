@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 import numpy as np
 from scoreboard import frame_processing
-from regex import regex_processing
+from regex import score_processing
 
 import torch
 

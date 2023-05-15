@@ -257,11 +257,12 @@ def parse_opt():
     return opt
 
 
-def main(opt):
-    check_requirements(exclude=('tensorboard', 'thop'))
-    run(**vars(opt))
+# def main(opt):
+#     check_requirements(exclude=('tensorboard', 'thop'))
+#     run(**vars(opt))
 
-def frame_processing(model,dt,save_dir,path,augment,conf_thres,iou_thres,classes, agnostic_nms,max_det,webcam,im0s,dataset,line_thickness,save_crop,hide_conf,hide_labels,save_txt,save_img,save_conf,view_img,names,windows):
+def frame_processing(model,dt,augment,conf_thres,iou_thres,classes, agnostic_nms,max_det,im0s,dataset,line_thickness,save_crop,hide_conf,hide_labels,save_txt,save_img,save_conf,view_img,names,windows):
+    
     with dt[0]:
         im = torch.from_numpy(im).to(model.device)
         im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -334,8 +335,3 @@ def frame_processing(model,dt,save_dir,path,augment,conf_thres,iou_thres,classes
             cv2.imshow(str(p), im0)
             cv2.waitKey(1)  # 1 millisecond
     
-
-
-if __name__ == '__main__':
-    opt = parse_opt()
-    main(opt)

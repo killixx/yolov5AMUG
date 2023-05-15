@@ -5,8 +5,8 @@ import platform
 import sys
 from pathlib import Path
 import numpy as np
-from scoreboard import frame_processing
-from regex import score_processing
+import scoreboard 
+import regex 
 
 import torch
 
@@ -26,7 +26,7 @@ from utils.torch_utils import select_device, smart_inference_mode
 
 @smart_inference_mode()
 def run(
-        weights=ROOT / 'yolov5s.pt',  # model path or triton URL
+        weights=ROOT / 'model1.pt',  # model path or triton URL
         source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
         imgsz=(640, 640),  # inference size (height, width)
@@ -54,6 +54,7 @@ def run(
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
 ):
+    
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
@@ -69,7 +70,7 @@ def run(
 
     # Load model
     device = select_device(device)
-    model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
+   # model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
     stride, names, pt = model.stride, model.names, model.pt
     imgsz = check_img_size(imgsz, s=stride)  # check image size
 
@@ -93,13 +94,66 @@ def run(
     # List of input frames
 input_frames = ['frame1.jpg', 'frame2.jpg', 'frame3.jpg']
 
+class Process:
+    def __init__(self,save_conf,names,windows,hide_conf,hide_labels,im0s,dataset,line_thickness,model,dt,save_dir,path,augment,conf_thres,iou_thres,classes, agnostic_nms,max_det,save_crop,save_txt,save_img,view_img, img_size, im0, results, agnostic, colors, img, device):
+        self.save_conf = save_conf
+        self.names = names
+        self.windows = windows
+        self.hide_conf = hide_conf
+        self.hide_labels = hide_labels
+        self.im0s = im0s
+        self.dataset = dataset
+        self.line_thickness = line_thickness
+        self.model = model
+        self.max_det = max_det
+        self.agnostic_nms = agnostic_nms
+        self.augment = augment
+        self.path = path
+        self.save_dir = save_dir
+        self.dt = dt
+        self.img_size = img_size
+        self.im0 = im0
+        self.results = results
+        self.conf_thres = conf_thres
+        self.iou_thres = iou_thres
+        self.agnostic = agnostic
+        self.classes = classes
+        self.colors = colors
+        self.save_img = save_img
+        self.save_crop = save_crop
+        self.view_img = view_img
+        self.save_txt = save_txt
+        self.img = img
+        self.device = device
+
+    def initialize(self):
+        self.width = 1280
+        self.height = 720
+        self.conf_thres = 0.4
+        self.iou_thres = 0.5
+        self.img_size = 640
+        self.device = ''
+        self.view_img = False
+        self.save_txt = False
+        self.classes = []
+        self.colors = [[0, 255, 0]]
+        self.aggregation = 'first'
+        #self.dt =
+        #self.model = 
+
+process1=Process()
+process1.initialize()
+
+process2=Process()
+process2.initialize()
+
 # Loop through input frames
 for frame in input_frames:
     # Call frame_processing function to detect and extract scoreboard
-    output_im, ratio, (xyxy, labels, scores) = frame_processing(frame)
+    output_im, ratio, (xyxy, labels, scores) = scoreboard.frame_processing(model,dt,save_dir,path,augment,conf_thres,iou_thres,classes, agnostic_nms,max_det,webcam,im0s,dataset,line_thickness,save_crop,hide_conf,hide_labels,save_txt,save_img,save_conf,view_img,names,windows)
 
     # Call regex_processing function to extract information from scoreboard
-    scoreboard_info = regex_processing(output_im, xyxy)
+    scoreboard_info = regex.score_processing(output_im, xyxy)
 
     # Save result
     with open(f'{frame}_info.txt', 'w') as f:

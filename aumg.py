@@ -157,7 +157,7 @@ def parse_opt():
     parser.add_argument('--weights2', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path or triton URL')
     parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
     opt = parser.parse_args()
-    opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
+    #opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     print_args(vars(opt))
     return opt
 

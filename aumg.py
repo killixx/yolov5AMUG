@@ -10,6 +10,7 @@ import scoreboard
 import regex 
 from pytesseract import pytesseract
 import re
+import cv2
 
 
 import torch
@@ -152,6 +153,58 @@ class ImageProcess:
         
     #endregion
 
+runs = 0
+wickets = 0
+
+def readandreturn(results):
+    # Apply pytesseract OCR
+    text = pytesseract.image_to_string(results[0],config ='--psm 6')
+
+    text.strip()
+    text.replace(" ", "")
+
+    pattern = "([0 - 9] * -[0 - 9] *)"
+
+    results = re.match(pattern, text)
+
+    if results == False:
+        return
+    print("Text: "+text)
+    if text == None:
+        text = text.split('-')
+        if(text.split('-')[0].strip().isnumeric() == False):
+            return
+        runs = text.split('-')[0].strip()
+        if(len(text) > 1):
+            if(text.split('-')[1].strip().isnumeric() == False):
+                return
+            wickets = text.split('-')[1].strip()
+            runs=int(runs)
+            wickets=int(wickets)
+        return runs,wickets
+
+def change_detect(detected_runs, detected_wickets):
+    global runs, wickets, old_runs, old_wickets
+
+    old_runs = runs
+    old_wickets = wickets
+
+    runs = detected_runs
+    wickets = detected_wickets
+
+    runs_diff = runs-old_runs
+    wickets_diff = wickets-old_wickets
+
+    if(runs_diff > 3 and runs_diff < 7):
+        print("runs changed")
+
+    if(wickets_diff > 0 and wickets_diff < 2):
+        print("wicket down")
+
+    
+
+
+
 
 @smart_inference_mode()
 def run(
@@ -192,7 +245,15 @@ def run(
                 
                 #detecting Scores
                 results = imageProcessor.DetectImage(im,im0, False)
+                if(len(results))>0:
+                    readandreturn(results[0])
+                    print('results found')
+                    d_runs, d_wic = readandreturn(results[0])
+                    change_detect(d_runs,d_wic)
+                     
+                         
     print('execution complete')
+
 
 ####Program Execution which needs to be moved to a separate file
 
@@ -216,56 +277,6 @@ if __name__ == '__main__':
 
 
 
-@smart_inference_mode()
-def run(
-        weights1=ROOT / 'model1.pt',  # model path or triton URL
-        weights2=ROOT / 'model2.pt',  # model path or triton URL
-        source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
-):
-    source = str(source)
-    is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
-    is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
-    screenshot = source.lower().startswith('screen')
-    if is_url and is_file:
-        source = check_file(source)  # download
-
-    # Load model
-    imageProcessor = ImageProcess()
-    imageProcessor.initialize(weights1, weights2)
-    imgsz1, imgsz2 = imageProcessor.GetImageSizes()
-    pt1, pt2 = imageProcessor.GetPt()
-    stride1, stride2 = imageProcessor.GetStrides()
-
-    if screenshot:
-        dataset = LoadScreenshots(source, img_size=imgsz1, stride=stride1, auto=pt1)
-    else:
-        dataset = LoadImages(source, img_size=imgsz1, stride=stride1, auto=pt1, vid_stride=1)
-
-    for path, im, im0, vid_cap, s in dataset:
-        result = imageProcessor.DetectImage(im, im0, True)
-        
-        f = str(".image".with_suffix('.jpg'))
-        # cv2.imwrite(f, crop)  # save BGR, https://github.com/ultralytics/yolov5/issues/7007 chroma subsampling issue
-        Image.fromarray(result[0][..., ::-1]).save(f, quality=95, subsampling=0)  # save RGB
-        
-        if len(result) > 0:
-            for frame in result:
-                frame0 = LoadCroppedImage(f, imgsz2, stride2, pt2)
-                path, im, im0, vid_cap, s = frame0.get_results()
-                
-                #detecting Scores
-                results = imageProcessor.DetectImage(im,im0, False)
-                
-                #TODO: Further processing for converting image to text and Keeping tracks of score
-
-                
-                f2 ="score_image.jpg"
-                Image.fromarray(results[0][..., ::-1]).save(f2, quality=95, subsampling=0)  # save RGB
-                
-                extract_text_from_image(f2)
-
-                detect_merge()
-
 def capture_video(video_path):
     video_path = input("Enter the path to the video file: ")
     # Create a VideoCapture object
@@ -277,12 +288,7 @@ def capture_video(video_path):
 
     # Get the total number of frames in the video
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print("Total frames:", total_frames)
-
-def extract_text_from_image(result):
-    image = cv2.imread(result)
-    text = pytesseract.image_to_string(image)
-    return text.strip()                
+    print("Total frames:", total_frames)            
 
 def detect_merge(text,total_frames):
     text.strip()
@@ -326,7 +332,7 @@ def detect_merge(text,total_frames):
     for filename in os.listdir(image_folder):
         if filename.endswith(".jpg"):
             image_path = os.path.join(image_folder, filename)
-            text = extract_text_from_image(image_path)
+            #text = extract_text_from_image(image_path)
             changes = detect_merge(text)
             if changes:
                 changed_frames.append(int(filename[:-4]))
@@ -342,5 +348,5 @@ def detect_merge(text,total_frames):
 #            subprocess.call(command, shell=True)
 
     
-
+        
 

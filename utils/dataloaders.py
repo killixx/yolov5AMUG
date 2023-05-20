@@ -17,6 +17,7 @@ from multiprocessing.pool import Pool, ThreadPool
 from pathlib import Path
 from threading import Thread
 from urllib.parse import urlparse
+import cv2
 
 import numpy as np
 import psutil

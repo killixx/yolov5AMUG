@@ -8,8 +8,14 @@ from PIL import Image
 import numpy as np
 import scoreboard 
 import regex 
+from pytesseract import pytesseract
+import re
+
 
 import torch
+
+pytesseract.tesseract_cmd = 'C:\\Tesseract-OCR\\tesseract.exe'
+
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -185,7 +191,7 @@ def run(
                 path, im, im0, vid_cap, s = frame0.get_results()
                 
                 #detecting Scores
-                resuts = imageProcessor.DetectImage(im,im0, False)
+                results = imageProcessor.DetectImage(im,im0, False)
     print('execution complete')
 
 ####Program Execution which needs to be moved to a separate file
@@ -257,9 +263,5 @@ def run(
                 Image.fromarray(results[0][..., ::-1]).save(f2, quality=95, subsampling=0)  # save RGB
 
 
-                
-        
 
 
-
-    

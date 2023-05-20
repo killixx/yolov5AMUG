@@ -157,6 +157,7 @@ runs = 0
 wickets = 0
 
 def readandreturn(results):
+    global runs, wickets
     # Apply pytesseract OCR
     text = pytesseract.image_to_string(results[0],config ='--psm 6')
 
@@ -168,20 +169,21 @@ def readandreturn(results):
     results = re.match(pattern, text)
 
     if results == False:
-        return
+        return runs, wickets
     print("Text: "+text)
-    if text == None:
+    if text != None:
         text = text.split('-')
+        if len(text) != 2:
+            return runs, wickets
         if(text.split('-')[0].strip().isnumeric() == False):
-            return
-        runs = text.split('-')[0].strip()
-        if(len(text) > 1):
-            if(text.split('-')[1].strip().isnumeric() == False):
-                return
-            wickets = text.split('-')[1].strip()
-            runs=int(runs)
-            wickets=int(wickets)
-        return runs,wickets
+            return runs, wickets
+        runs1 = text.split('-')[0].strip()
+        if(text.split('-')[1].strip().isnumeric() == False):
+            return runs, wickets
+        wickets1 = text.split('-')[1].strip()
+        runs2=int(runs1)
+        wickets2=int(wickets1)
+        return runs2,wickets2
 
 def change_detect(detected_runs, detected_wickets):
     global runs, wickets, old_runs, old_wickets

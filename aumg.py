@@ -108,12 +108,11 @@ class ImageProcess:
 
         # NMS
         with self.dt[2]:
-            pred = non_max_suppression(pred, self.conf_thres, self.ou_thres, self.classes, self.agnostic_nms, max_det=self.max_det)
+            pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms, max_det=self.max_det)
 
 
         # Process predictions
         for i, det in enumerate(pred):  # per image
-            seen += 1
             im0 = im0s.copy()
             
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
@@ -133,7 +132,7 @@ class ImageProcess:
                     c = int(cls)  # integer class
                     label = None
                     annotator.box_label(xyxy,"", color=colors(c, True))
-                    crop=get_cropped_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True , save = False)
+                    crop=get_cropped_box(xyxy,imc,BGR=True)
                     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
                     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                     kernel = np.ones((3,3),np.uint8)
@@ -148,6 +147,46 @@ class ImageProcess:
     #endregion
 
 
+@smart_inference_mode()
+def run(
+        weights1=ROOT / 'yolov5s.pt',  # model path or triton URL
+        weights2=ROOT / 'yolov5s.pt',  # model path or triton URL
+        source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
+):
+    source = str(source)
+    is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
+    is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
+    screenshot = source.lower().startswith('screen')
+    if is_url and is_file:
+        source = check_file(source)  # download
+
+    # Load model
+    imageProcessor = ImageProcess()
+    imageProcessor.initialize(weights1, weights2)
+    imgsz1, imgsz2 = imageProcessor.GetImageSizes()
+    pt1, pt2 = imageProcessor.GetPt()
+    stride1, stride2 = imageProcessor.GetStrides()
+
+    if screenshot:
+        dataset = LoadScreenshots(source, img_size=imgsz1, stride=stride1, auto=pt1)
+    else:
+        dataset = LoadImages(source, img_size=imgsz1, stride=stride1, auto=pt1, vid_stride=1)
+
+    for path, im, im0, vid_cap, s in dataset:
+        result = imageProcessor.DetectImage(im, im0, True)
+        
+        f = ".croppedimage.jpg"
+        # cv2.imwrite(f, crop)  # save BGR, https://github.com/ultralytics/yolov5/issues/7007 chroma subsampling issue
+        Image.fromarray(result[0][..., ::-1]).save(f, quality=95, subsampling=0)  # save RGB
+        
+        if len(result) > 0:
+            for frame in result:
+                frame0 = LoadCroppedImage(f, imgsz2, stride2, pt2)
+                path, im, im0, vid_cap, s = frame0.get_results()
+                
+                #detecting Scores
+                resuts = imageProcessor.DetectImage(im,im0, False)
+    print('execution complete')
 
 ####Program Execution which needs to be moved to a separate file
 
@@ -209,9 +248,14 @@ def run(
                 path, im, im0, vid_cap, s = frame0.get_results()
                 
                 #detecting Scores
-                resuts = imageProcessor.DetectImage(im,im0, False)
+                results = imageProcessor.DetectImage(im,im0, False)
                 
                 #TODO: Further processing for converting image to text and Keeping tracks of score
+
+                
+                f2 ="score_image.jpg"
+                Image.fromarray(results[0][..., ::-1]).save(f2, quality=95, subsampling=0)  # save RGB
+
 
                 
         

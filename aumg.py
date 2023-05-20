@@ -234,9 +234,9 @@ def run(
     for path, im, im0, vid_cap, s in dataset:
         result = imageProcessor.DetectImage(im, im0, True)
         
-        f = ".croppedimage.jpg"
+        #f = ".croppedimage.jpg"
         # cv2.imwrite(f, crop)  # save BGR, https://github.com/ultralytics/yolov5/issues/7007 chroma subsampling issue
-        Image.fromarray(result[0][..., ::-1]).save(f, quality=95, subsampling=0)  # save RGB
+        cv2.imwrite('output.jpg',  result[0])
         
         if len(result) > 0:
             for frame in result:

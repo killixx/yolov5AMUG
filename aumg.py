@@ -218,8 +218,8 @@ if __name__ == '__main__':
 
 @smart_inference_mode()
 def run(
-        weights1=ROOT / 'yolov5s.pt',  # model path or triton URL
-        weights2=ROOT / 'yolov5s.pt',  # model path or triton URL
+        weights1=ROOT / 'model1.pt',  # model path or triton URL
+        weights2=ROOT / 'model2.pt',  # model path or triton URL
         source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
 ):
     source = str(source)
@@ -261,7 +261,86 @@ def run(
                 
                 f2 ="score_image.jpg"
                 Image.fromarray(results[0][..., ::-1]).save(f2, quality=95, subsampling=0)  # save RGB
+                
+                extract_text_from_image(f2)
 
+                detect_merge()
 
+def capture_video(video_path):
+    video_path = input("Enter the path to the video file: ")
+    # Create a VideoCapture object
+    cap = cv2.VideoCapture(video_path)
+    # Check if the video capture is successful
+    if not cap.isOpened():
+        print("Error opening video file.")
+        exit()
+
+    # Get the total number of frames in the video
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    print("Total frames:", total_frames)
+
+def extract_text_from_image(result):
+    image = cv2.imread(result)
+    text = pytesseract.image_to_string(image)
+    return text.strip()                
+
+def detect_merge(text,total_frames):
+    text.strip()
+    text.replace(" ", "")
+
+    pattern = "([0 - 9] * -[0 - 9] *)"
+
+    result = re.match(pattern, text)
+
+    if result == False:
+        return
+    print("Text: "+text)
+    if text == None:
+        return
+
+    runs = 0
+    wickets = 0
+    changes = []
+
+    for line in text.split("\n"):
+        if "-" in line:
+            left, right = line.split("-")
+            try:
+                runs_diff = int(left.strip())
+                wickets_diff = int(right.strip())
+
+                if runs_diff in [4, 6]:
+                    runs += runs_diff
+                    changes.append(f"Runs changed by {runs_diff} (+{runs_diff})")
+
+                if wickets_diff in [-1, 1]:
+                    wickets += wickets_diff
+                    changes.append(f"Wickets changed by {wickets_diff} ({wickets})")
+            except ValueError:
+                pass
+        return changes
+    
+    image_folder = "<path_to_frames_folder>"
+    changed_frames = []
+
+    for filename in os.listdir(image_folder):
+        if filename.endswith(".jpg"):
+            image_path = os.path.join(image_folder, filename)
+            text = extract_text_from_image(image_path)
+            changes = detect_merge(text)
+            if changes:
+                changed_frames.append(int(filename[:-4]))
+            
+            clip_folder = "C:\yolov5AMUG"
+            clip_length = 420
+
+        for frame_index in changed_frames:
+            start_frame = max(1, frame_index - clip_length)
+            end_frame = min(frame_index + clip_length, total_frames)
+
+            command = f"ffmpeg -start_number {start_frame} -i {image_folder}/%d.jpg -vframes {2 * clip_length + 1} {clip_folder}/{frame_index}.mp4"
+#            subprocess.call(command, shell=True)
+
+    
 
 

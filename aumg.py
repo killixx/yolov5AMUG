@@ -141,13 +141,15 @@ class ImageProcess:
                     annotator.box_label(xyxy,"", color=colors(c, True))
                     crop=get_cropped_box(xyxy,imc,BGR=True)
                     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-                    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                    kernel = np.ones((3,3),np.uint8)
-                    erosion = cv2.erode(binary,kernel,iterations = 1)
-                    denoised = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
-                    
-                    results.append(denoised)
-                    
+                    if not is_detecting_board:
+                        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                        kernel = np.ones((3,3),np.uint8)
+                        erosion = cv2.erode(binary,kernel,iterations = 1)
+                        denoised = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
+                        
+                        results.append(denoised)
+                    else:
+                        results.append(crop)
         return results
 
         
@@ -170,8 +172,9 @@ def readandreturn(results):
 
     if results == False:
         return runs, wickets
-    print("Text: "+text)
+    print(f"Text: {text} ")
     if text != None:
+        print(f"Textdetected: {text} ")
         text = text.split('-')
         if len(text) != 2:
             return runs, wickets
@@ -183,6 +186,7 @@ def readandreturn(results):
         wickets1 = text.split('-')[1].strip()
         runs2=int(runs1)
         wickets2=int(wickets1)
+        print(f"runs{runs2}--wickets{wickets2}")
         return runs2,wickets2
 
 def change_detect(detected_runs, detected_wickets):
@@ -236,20 +240,21 @@ def run(
     for path, im, im0, vid_cap, s in dataset:
         result = imageProcessor.DetectImage(im, im0, True)
         
-        #f = ".croppedimage.jpg"
+        f = ".croppedimage.jpg"
         # cv2.imwrite(f, crop)  # save BGR, https://github.com/ultralytics/yolov5/issues/7007 chroma subsampling issue
-        cv2.imwrite('output.jpg',  result[0])
         
         if len(result) > 0:
             for frame in result:
+                cv2.imwrite( f ,  frame)
                 frame0 = LoadCroppedImage(f, imgsz2, stride2, pt2)
                 path, im, im0, vid_cap, s = frame0.get_results()
-                
+
                 #detecting Scores
                 results = imageProcessor.DetectImage(im,im0, False)
                 if(len(results))>0:
-                    readandreturn(results[0])
-                    print('results found')
+                    #results wali if k andr ye type kro
+                    cv2.imwrite("output.jpg",results[0])
+                    cv2.imshow("output.jpg",results[0])
                     d_runs, d_wic = readandreturn(results[0])
                     change_detect(d_runs,d_wic)
                      

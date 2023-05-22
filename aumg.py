@@ -111,7 +111,10 @@ class ImageProcess:
 
         # Inference
         with self.dt[1]:
-            pred = self.model1(im, augment=self.augment, visualize=False)
+            if is_detecting_board:
+                pred = self.model1(im, augment=self.augment, visualize=False)
+            else:
+                pred = self.model2(im, augment=self.augment, visualize=False)
 
         # NMS
         with self.dt[2]:

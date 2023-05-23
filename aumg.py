@@ -11,6 +11,9 @@ import regex
 from pytesseract import pytesseract
 import re
 import cv2
+import subprocess
+import ffmpeg
+
 
 
 import torch
@@ -205,22 +208,27 @@ def change_detect(detected_runs, detected_wickets):
     wickets_diff = wickets-old_wickets
 
     if(runs_diff > 3 and runs_diff < 7):
-        print("runs changed")
+        return 
 
     if(wickets_diff > 0 and wickets_diff < 2):
         print("wicket down")
 
     
 
+video_path = "video.mp4"
+# Create a copy of the source video file
+copy = video_path + ".copy"
 
+print (copy)
 
+Y = video_path
+        
 
-@smart_inference_mode()
 def run(
-        weights1=ROOT / 'yolov5s.pt',  # model path or triton URL
-        weights2=ROOT / 'yolov5s.pt',  # model path or triton URL
-        source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
-):
+        weights1=ROOT / 'model1.pt',  # model path or triton URL
+        weights2=ROOT / 'model2.pt',  # model path or triton URL
+        source = Y ,  # file/dir/URL/glob/screen/0(webcam)
+            ):
     source = str(source)
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
     is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
@@ -239,6 +247,9 @@ def run(
         dataset = LoadScreenshots(source, img_size=imgsz1, stride=stride1, auto=pt1)
     else:
         dataset = LoadImages(source, img_size=imgsz1, stride=stride1, auto=pt1, vid_stride=1)
+    
+    count = 0
+    frame = []
 
     for path, im, im0, vid_cap, s in dataset:
         result = imageProcessor.DetectImage(im, im0, True)
@@ -260,8 +271,52 @@ def run(
                     cv2.imshow("output.jpg",results[0])
                     d_runs, d_wic = readandreturn(results[0])
                     change_detect(d_runs,d_wic)
-                     
-                         
+        count = count + 1
+    # Create a new folder for the short clips
+    if not os.path.exists("video_shot"):
+        os.mkdir("video_shot")
+
+    # Create a list to store the short clips
+    short_clips = []
+    frame = frame + (count,)
+    i = 0
+    for i  in frame[i]:
+        starting_duration = 0
+        ending_duration = 0
+        s = i-210
+        e = i+210
+        l=len(source)
+        # Get the starting and ending duration of the short clip
+        if s is True:
+            starting_duration = 0
+        else:
+            starting_duration = i - 210
+
+        if any(e > l):
+            ending_duration = l
+        else:
+            ending_duration = i + 210
+        # Create the command to merge the short clip
+        cmd = f"ffmpeg -i {source} -ss {str(starting_duration)} -to {str(ending_duration)} -c:v copy -c:a copy shot{i}.mp4"
+        print(cmd)
+        os.system(f'cmd /c "{cmd}"')
+        # Save the short clip in the video_shot folder
+        os.system("mv shot" + str(i) + ".mp4 video_shot")
+
+        # Add the short clip to the list
+        short_clips.append("shot" + str(i) + ".mp4")
+        
+        # Display it on the web video display panel
+        #print("The video shot for wicket " + str(i) + " is now available on the web video display panel.")
+
+
+    # Merge the short clips into a single video
+    cmd = f"ffmpeg -f concat -i {'|'.join(short_clips)} -c copy highlight.mp4"
+
+    # Display the merged video on the web video display panel
+    print("The highlight video is now available on the web video display panel.") 
+
+
     print('execution complete')
 
 

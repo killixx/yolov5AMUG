@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css')}}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
+    <title>AMG</title>
+</head>
+<body>
+
+    <div class="banner">
+
+        <div class="navbar">
+            <p  class="logo">AUMG</p>
+
+            <ul>
+                <li><a href="/index">Home</a></li>
+                <li><a href="/about">About us</a></li>
+                <li><a href="/generatehighlights">Generate Highlights</a></li>
+            </ul>
+
+        </div>
+
+        <div class="contentAmg">
+
+            <h2 class="headings">Upload Video</h2>
+            <br>
+            <br>
+
+            <form method="post" action="/generateHighlights" enctype="multipart/form-data">
+
+            <input  type="file" class="file-input" accept="video/mp4,video/x-m4v,video/*"
+             name="file"  onchange="selectedVideo(this);" />
+
+             <i class="fas fa-cloud-upload-alt"></i>
+             <p>Browse File To Upload</p>
+
+
+
+            <video id="video" width="500" controls>
+                <source id="source" type="video/mp4">
+            </video>
+
+            <div>
+                <button type="submit"><span></span>Generate Highlights</button>
+            </div>
+            <br>
+            <br>
+            </form>
+            <h2 class="headings">Generated Video</h2>
+            <br>
+            <br>
+
+            <video id="video1" width="500" controls>
+                <source id="source1" URL ="" type="video/mp4">
+            </video>
+            <div>
+                <button type="button"><span></span>Download</button>
+            </div>
+        </form>
+        </div>
+    </div>
+</body>
+
+<script>
+    function selectedVideo(self){
+        var file = self.files[0];
+        var reader = new FileReader();
+
+        reader.onload = function(e) {
+           var src = e.target.result;
+           var video = document.getElementById("video");
+           var source = document.getElementById("source");
+
+           source.setAttribute("src", src);
+           video.load();
+           video.play();
+        };
+
+        reader.readAsDataURL(file);
+    }
+    </script>
+
+</html>

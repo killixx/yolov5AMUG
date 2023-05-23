@@ -64,7 +64,7 @@ class ImageProcess:
     pt1 = None
     pt2 = None
     #endregion
-    
+   
     #region Methods
     
     def initialize(self, weights_one_path, weights_two_path):
@@ -151,7 +151,7 @@ class ImageProcess:
                         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                         kernel = np.ones((3,3),np.uint8)
                         erosion = cv2.erode(binary,kernel,iterations = 1)
-                        denoised = cv2.fastNlMeansDenoising(erosion, None, h=10, templateWindowSize=7, searchWindowSize=21)
+                        denoised = cv2.fastNlMeansDenoising(erosion, None, h=8, templateWindowSize=7, searchWindowSize=21)
                         
                         results.append(denoised)
                     else:
@@ -215,203 +215,119 @@ def change_detect(detected_runs, detected_wickets):
 
     
 
-video_path = "video.mp4"
-# Create a copy of the source video file
-copy = video_path + ".copy"
-
-print (copy)
-
-Y = video_path
-        
-
-def run(
-        weights1=ROOT / 'model1.pt',  # model path or triton URL
-        weights2=ROOT / 'model2.pt',  # model path or triton URL
-        source = Y ,  # file/dir/URL/glob/screen/0(webcam)
-            ):
-    source = str(source)
-    is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
-    is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
-    screenshot = source.lower().startswith('screen')
-    if is_url and is_file:
-        source = check_file(source)  # download
-
-    # Load model
-    imageProcessor = ImageProcess()
-    imageProcessor.initialize(weights1, weights2)
-    imgsz1, imgsz2 = imageProcessor.GetImageSizes()
-    pt1, pt2 = imageProcessor.GetPt()
-    stride1, stride2 = imageProcessor.GetStrides()
-
-    if screenshot:
-        dataset = LoadScreenshots(source, img_size=imgsz1, stride=stride1, auto=pt1)
-    else:
-        dataset = LoadImages(source, img_size=imgsz1, stride=stride1, auto=pt1, vid_stride=1)
+class video_process():
+    video_path=""
     
-    count = 0
-    frame = []
+    def run(self,source,  # file/dir/URL/glob/screen/0(webcam)
+            weights1=ROOT / 'model1.pt',  # model path or triton URL
+            weights2=ROOT / 'model2.pt'  # model path or triton URL
+                ):
+        source = str(source)
+        is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
+        is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
+        screenshot = source.lower().startswith('screen')
+        if is_url and is_file:
+            source = check_file(source)  # download
 
-    for path, im, im0, vid_cap, s in dataset:
-        result = imageProcessor.DetectImage(im, im0, True)
+        # Load model
+        imageProcessor = ImageProcess()
+        imageProcessor.initialize(weights1, weights2)
+        imgsz1, imgsz2 = imageProcessor.GetImageSizes()
+        pt1, pt2 = imageProcessor.GetPt()
+        stride1, stride2 = imageProcessor.GetStrides()
+
+        if screenshot:
+            dataset = LoadScreenshots(source, img_size=imgsz1, stride=stride1, auto=pt1)
+        else:
+            dataset = LoadImages(source, img_size=imgsz1, stride=stride1, auto=pt1, vid_stride=1)
         
-        f = ".croppedimage.jpg"
-        # cv2.imwrite(f, crop)  # save BGR, https://github.com/ultralytics/yolov5/issues/7007 chroma subsampling issue
-        
-        if len(result) > 0:
-            for frame in result:
-                cv2.imwrite( f ,  frame)
-                frame0 = LoadCroppedImage(f, imgsz2, stride2, pt2)
-                path, im, im0, vid_cap, s = frame0.get_results()
+        count = 0
+        frame = []
 
-                #detecting Scores
-                results = imageProcessor.DetectImage(im,im0, False)
-                if(len(results))>0:
-                    #results wali if k andr ye type kro
-                    cv2.imwrite("output.jpg",results[0])
-                    cv2.imshow("output.jpg",results[0])
-                    d_runs, d_wic = readandreturn(results[0])
-                    change_detect(d_runs,d_wic)
-        count = count + 1
-    # Create a new folder for the short clips
-    if not os.path.exists("video_shot"):
-        os.mkdir("video_shot")
+        for path, im, im0, vid_cap, s in dataset:
+            result = imageProcessor.DetectImage(im, im0, True)
+            
+            f = ".croppedimage.jpg"            
+            if len(result) > 0:
+                for frame in result:
+                    cv2.imwrite( f ,  frame)
+                    frame0 = LoadCroppedImage(f, imgsz2, stride2, pt2)
+                    path, im, im0, vid_cap, s = frame0.get_results()
 
-    # Create a list to store the short clips
-    short_clips = []
-    frame = frame + (count,)
-    i = 0
-    for i  in frame[i]:
-        starting_duration = 0
-        ending_duration = 0
-        s = i-210
-        e = i+210
-        l=len(source)
-        # Get the starting and ending duration of the short clip
-        if s is True:
+                    #detecting Scores
+                    results = imageProcessor.DetectImage(im,im0, False)
+                    if(len(results))>0:
+                        #results wali if k andr ye type kro
+                        cv2.imwrite("output.jpg",results[0])
+                       # cv2.imshow("output.jpg",results[0])
+                        d_runs, d_wic = readandreturn(results[0])
+                        change_detect(d_runs,d_wic)
+            count = count + 1
+        # Create a new folder for the short clips
+        if not os.path.exists("video_shot"):
+            os.mkdir("video_shot")
+
+        2# Create a list to store the short clips
+        short_clips = []
+        frame = frame + (count,)
+        i = 0
+        for i  in frame[i]:
             starting_duration = 0
-        else:
-            starting_duration = i - 210
+            ending_duration = 0
+            s = i-210
+            e = i+210
+            l=len(source)
+            # Get the starting and ending duration of the short clip
+            if s is True:
+                starting_duration = 0
+            else:
+                starting_duration = i - 210
 
-        if any(e > l):
-            ending_duration = l
-        else:
-            ending_duration = i + 210
-        # Create the command to merge the short clip
-        cmd = f"ffmpeg -i {source} -ss {str(starting_duration)} -to {str(ending_duration)} -c:v copy -c:a copy shot{i}.mp4"
-        print(cmd)
-        os.system(f'cmd /c "{cmd}"')
-        # Save the short clip in the video_shot folder
-        os.system("mv shot" + str(i) + ".mp4 video_shot")
+            if any(e > l):
+                ending_duration = l
+            else:
+                ending_duration = i + 210
+            # Create the command to merge the short clip
+            cmd = f"ffmpeg -i {source} -ss {str(starting_duration)} -to {str(ending_duration)} -c:v copy -c:a copy shot{i}.mp4"
+            print(cmd)
+            os.system(f'cmd /c "{cmd}"')
+            # Save the short clip in the video_shot folder
+            os.system("mv shot" + str(i) + ".mp4 video_shot")
 
-        # Add the short clip to the list
-        short_clips.append("shot" + str(i) + ".mp4")
-        
-        # Display it on the web video display panel
-        #print("The video shot for wicket " + str(i) + " is now available on the web video display panel.")
-
-
-    # Merge the short clips into a single video
-    cmd = f"ffmpeg -f concat -i {'|'.join(short_clips)} -c copy highlight.mp4"
-
-    # Display the merged video on the web video display panel
-    print("The highlight video is now available on the web video display panel.") 
+            # Add the short clip to the list
+            short_clips.append("shot" + str(i) + ".mp4")
+            
+            # Display it on the web video display panel
+            #print("The video shot for wicket " + str(i) + " is now available on the web video display panel.")
 
 
-    print('execution complete')
+        # Merge the short clips into a single video
+        cmd = f"ffmpeg -f concat -i {'|'.join(short_clips)} -c copy highlight.mp4"
+
+        # Display the merged video on the web video display panel
+        print("The highlight video is now available on the web video display panel.") 
+
+
+        print('execution complete')
 
 
 ####Program Execution which needs to be moved to a separate file
 
-def parse_opt():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--weights1', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path or triton URL')
-    parser.add_argument('--weights2', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path or triton URL')
-    parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
-    opt = parser.parse_args()
-    #opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
-    print_args(vars(opt))
-    return opt
+# def parse_opt():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('--weights1', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path or triton URL')
+#     parser.add_argument('--weights2', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path or triton URL')
+#     parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
+#     opt = parser.parse_args()
+#     #opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
+#     print_args(vars(opt))
+#     return opt
 
-def main(opt):
-    check_requirements(exclude=('tensorboard', 'thop'))
-    run(**vars(opt))
+# def main(opt):
+#     check_requirements(exclude=('tensorboard', 'thop'))
+#     video_process.run(**vars(opt))
 
-if __name__ == '__main__':
-    opt = parse_opt()
-    main(opt)
-
-
-
-def capture_video(video_path):
-    video_path = input("Enter the path to the video file: ")
-    # Create a VideoCapture object
-    cap = cv2.VideoCapture(video_path)
-    # Check if the video capture is successful
-    if not cap.isOpened():
-        print("Error opening video file.")
-        exit()
-
-    # Get the total number of frames in the video
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print("Total frames:", total_frames)            
-
-def detect_merge(text,total_frames):
-    text.strip()
-    text.replace(" ", "")
-
-    pattern = "([0 - 9] * -[0 - 9] *)"
-
-    result = re.match(pattern, text)
-
-    if result == False:
-        return
-    print("Text: "+text)
-    if text == None:
-        return
-
-    runs = 0
-    wickets = 0
-    changes = []
-
-    for line in text.split("\n"):
-        if "-" in line:
-            left, right = line.split("-")
-            try:
-                runs_diff = int(left.strip())
-                wickets_diff = int(right.strip())
-
-                if runs_diff in [4, 6]:
-                    runs += runs_diff
-                    changes.append(f"Runs changed by {runs_diff} (+{runs_diff})")
-
-                if wickets_diff in [-1, 1]:
-                    wickets += wickets_diff
-                    changes.append(f"Wickets changed by {wickets_diff} ({wickets})")
-            except ValueError:
-                pass
-        return changes
+# if __name__ == '__main__':
+#     opt = parse_opt()
+#     main(opt)
     
-    image_folder = "<path_to_frames_folder>"
-    changed_frames = []
-
-    for filename in os.listdir(image_folder):
-        if filename.endswith(".jpg"):
-            image_path = os.path.join(image_folder, filename)
-            #text = extract_text_from_image(image_path)
-            changes = detect_merge(text)
-            if changes:
-                changed_frames.append(int(filename[:-4]))
-            
-            clip_folder = "C:\yolov5AMUG"
-            clip_length = 420
-
-        for frame_index in changed_frames:
-            start_frame = max(1, frame_index - clip_length)
-            end_frame = min(frame_index + clip_length, total_frames)
-
-            command = f"ffmpeg -start_number {start_frame} -i {image_folder}/%d.jpg -vframes {2 * clip_length + 1} {clip_folder}/{frame_index}.mp4"
-#            subprocess.call(command, shell=True)
-
-    
-        
-

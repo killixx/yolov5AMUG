@@ -52,7 +52,7 @@ def upload():
 
         return 'Video processing started.'
 
-    return 'Invalid file format.'
+    return 'Invalid.'
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -12,7 +12,6 @@ from pytesseract import pytesseract
 import re
 import cv2
 import subprocess
-import ffmpeg
 
 
 
@@ -96,6 +95,7 @@ class ImageProcess:
     def GetStrides(self):
         return self.stride1, self.stride2
         
+    
     def DetectImage(self,im, im0s, is_detecting_board = False):
         
         results = []
@@ -122,11 +122,12 @@ class ImageProcess:
         # NMS
         with self.dt[2]:
             pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms, max_det=self.max_det)
-
-
+  
         # Process predictions
         for i, det in enumerate(pred):  # per image
             im0 = im0s.copy()
+  
+
             
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             imc = im0.copy()
@@ -208,17 +209,20 @@ def change_detect(detected_runs, detected_wickets):
     wickets_diff = wickets-old_wickets
 
     if(runs_diff > 3 and runs_diff < 7):
+        print("its a boundary")
         return 
 
     if(wickets_diff > 0 and wickets_diff < 2):
         print("wicket down")
+        return
+        
 
     
 
 class video_process():
     video_path=""
     
-    def run(self,source,  # file/dir/URL/glob/screen/0(webcam)
+    def run(self,source ,  # file/dir/URL/glob/screen/0(webcam)
             weights1=ROOT / 'model1.pt',  # model path or triton URL
             weights2=ROOT / 'model2.pt'  # model path or triton URL
                 ):
@@ -245,20 +249,21 @@ class video_process():
         frame = []
 
         for path, im, im0, vid_cap, s in dataset:
-            result = imageProcessor.DetectImage(im, im0, True)
-            
-            f = ".croppedimage.jpg"            
+            result = imageProcessor.DetectImage(im, im0, True)           
             if len(result) > 0:
                 for frame in result:
-                    cv2.imwrite( f ,  frame)
-                    frame0 = LoadCroppedImage(f, imgsz2, stride2, pt2)
+                    y = "crop"+str(count)+".jpg"
+                    cv2.imwrite( y ,  frame)                    
+                    frame0 = LoadCroppedImage(y, imgsz2, stride2, pt2)
                     path, im, im0, vid_cap, s = frame0.get_results()
 
                     #detecting Scores
                     results = imageProcessor.DetectImage(im,im0, False)
                     if(len(results))>0:
                         #results wali if k andr ye type kro
-                        cv2.imwrite("output.jpg",results[0])
+                        #cv2.imwrite("output.jpg",results[0])
+                        
+                        cv2.imwrite( "output"+str(count)+".jpg" ,  results[0]) 
                        # cv2.imshow("output.jpg",results[0])
                         d_runs, d_wic = readandreturn(results[0])
                         change_detect(d_runs,d_wic)
@@ -313,21 +318,43 @@ class video_process():
 
 ####Program Execution which needs to be moved to a separate file
 
-# def parse_opt():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('--weights1', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path or triton URL')
-#     parser.add_argument('--weights2', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path or triton URL')
-#     parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
-#     opt = parser.parse_args()
-#     #opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
-#     print_args(vars(opt))
-#     return opt
+def parse_opt():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
+    opt = parser.parse_args()
+    #opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
+    print_args(vars(opt))
+    return opt
 
-# def main(opt):
-#     check_requirements(exclude=('tensorboard', 'thop'))
-#     video_process.run(**vars(opt))
+def main(opt):
+    check_requirements(exclude=('tensorboard', 'thop'))
+    vp = video_process()
+    vp.run(**vars(opt))
 
-# if __name__ == '__main__':
-#     opt = parse_opt()
-#     main(opt)
-    
+if __name__ == '__main__':
+    opt = parse_opt()
+    main(opt)
+
+
+
+# def process_frame(frame):
+#     # Assuming frame is a single frame of the video
+
+#     # Split the frame into a 3x3 grid
+#     rows = len(frame)
+#     cols = len(frame[0])
+#     box_rows = rows // 3
+#     box_cols = cols // 3
+
+#     for i in range(3):
+#         for j in range(3):
+#             # Get the box coordinates
+#             box_row_start = i * box_rows
+#             box_row_end = box_row_start + box_rows
+#             box_col_start = j * box_cols
+#             box_col_end = box_col_start + box_cols
+
+#             # Apply object detection only on first two columns of the last row
+#             if i == 2 and j < 2:
+#                 box = frame[box_row_start:box_row_end, box_col_start:box_col_end]
+#                 model1(box)

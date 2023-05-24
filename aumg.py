@@ -1,4 +1,3 @@
-
 import argparse
 import os
 import platform
@@ -168,8 +167,9 @@ wickets = 0
 def readandreturn(results):
     global runs, wickets
     # Apply pytesseract OCR
-    text = pytesseract.image_to_string(results[0],config ='--psm 6')
-
+    text = pytesseract.image_to_string(results,config ='--psm 6')
+    
+    print(f"Text: {text} ")
     text.strip()
     text.replace(" ", "")
 
@@ -179,25 +179,33 @@ def readandreturn(results):
 
     if results == False:
         return runs, wickets
-    print(f"Text: {text} ")
+    
     if text != None:
         print(f"Textdetected: {text} ")
         text = text.split('-')
         if len(text) != 2:
             return runs, wickets
-        if(text.split('-')[0].strip().isnumeric() == False):
+        if(text[0].strip().isnumeric() == False):
             return runs, wickets
-        runs1 = text.split('-')[0].strip()
-        if(text.split('-')[1].strip().isnumeric() == False):
+        runs1 = text[0].strip()
+        if(text[1].strip().isnumeric() == False):
             return runs, wickets
-        wickets1 = text.split('-')[1].strip()
+        wickets1 = text[1].strip()
         runs2=int(runs1)
         wickets2=int(wickets1)
-        print(f"runs{runs2}--wickets{wickets2}")
+        print(f"runs:{runs2}--wickets:{wickets2}")
         return runs2,wickets2
 
 def change_detect(detected_runs, detected_wickets):
     global runs, wickets, old_runs, old_wickets
+
+    c_w_diff = detected_wickets-wickets
+    c_r_diff = detected_runs-runs
+    
+    if(runs != 0 and wickets != 0) and (runs != None and wickets != None):# this condition is needed for our case as our video is not starting from 0
+        if(abs(c_w_diff) < 0 or abs(c_w_diff) > 1 or abs(c_r_diff) < 0 or abs(c_r_diff)>6):
+            print("Ignoring this")
+            return False
 
     old_runs = runs
     old_wickets = wickets
@@ -207,20 +215,45 @@ def change_detect(detected_runs, detected_wickets):
 
     runs_diff = runs-old_runs
     wickets_diff = wickets-old_wickets
+    
 
     if(runs_diff > 3 and runs_diff < 7):
         print("its a boundary")
-        return 
+        return True
 
-    if(wickets_diff > 0 and wickets_diff < 2):
+    if(wickets_diff > 0 and wickets_diff < 2): 
         print("wicket down")
-        return
+        return True
         
 
     
 
 class video_process():
     video_path=""
+    
+    def extract_frames(self, video_path, frame_numbers, output_path):
+        frame_numbers = set(frame_numbers)
+        frame_numbers = sorted(frame_numbers)
+        
+        cap = cv2.VideoCapture(video_path)
+        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = 30
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+        frame_count = 0
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            frame_count += 1
+            if frame_count in frame_numbers:
+                out.write(frame)
+
+        cap.release()
+        out.release()
+
     
     def run(self,source ,  # file/dir/URL/glob/screen/0(webcam)
             weights1=ROOT / 'model1.pt',  # model path or triton URL
@@ -243,10 +276,10 @@ class video_process():
         if screenshot:
             dataset = LoadScreenshots(source, img_size=imgsz1, stride=stride1, auto=pt1)
         else:
-            dataset = LoadImages(source, img_size=imgsz1, stride=stride1, auto=pt1, vid_stride=1)
+            dataset = LoadImages(source, img_size=imgsz1, stride=stride1, auto=pt1, vid_stride=30)#30fps
         
         count = 0
-        frame = []
+        framelist = []
 
         for path, im, im0, vid_cap, s in dataset:
             result = imageProcessor.DetectImage(im, im0, True)           
@@ -263,98 +296,44 @@ class video_process():
                         #results wali if k andr ye type kro
                         #cv2.imwrite("output.jpg",results[0])
                         
-                        cv2.imwrite( "output"+str(count)+".jpg" ,  results[0]) 
+                        #cv2.imwrite( "output"+str(count)+".jpg" ,  results[0]) 
                        # cv2.imshow("output.jpg",results[0])
                         d_runs, d_wic = readandreturn(results[0])
-                        change_detect(d_runs,d_wic)
+                        detected = change_detect(d_runs,d_wic)
+                        if detected:
+                            framelist.append(count)
             count = count + 1
         # Create a new folder for the short clips
         if not os.path.exists("video_shot"):
             os.mkdir("video_shot")
-
-        2# Create a list to store the short clips
-        short_clips = []
-        frame = frame + (count,)
-        i = 0
-        for i  in frame[i]:
-            starting_duration = 0
-            ending_duration = 0
-            s = i-210
-            e = i+210
-            l=len(source)
-            # Get the starting and ending duration of the short clip
-            if s is True:
-                starting_duration = 0
-            else:
-                starting_duration = i - 210
-
-            if any(e > l):
-                ending_duration = l
-            else:
-                ending_duration = i + 210
-            # Create the command to merge the short clip
-            cmd = f"ffmpeg -i {source} -ss {str(starting_duration)} -to {str(ending_duration)} -c:v copy -c:a copy shot{i}.mp4"
-            print(cmd)
-            os.system(f'cmd /c "{cmd}"')
-            # Save the short clip in the video_shot folder
-            os.system("mv shot" + str(i) + ".mp4 video_shot")
-
-            # Add the short clip to the list
-            short_clips.append("shot" + str(i) + ".mp4")
             
-            # Display it on the web video display panel
-            #print("The video shot for wicket " + str(i) + " is now available on the web video display panel.")
+        croplist = []
 
-
-        # Merge the short clips into a single video
-        cmd = f"ffmpeg -f concat -i {'|'.join(short_clips)} -c copy highlight.mp4"
-
-        # Display the merged video on the web video display panel
+        for number in framelist:
+            for num in range(number - 240, number+240):
+                if num >= 0:
+                    croplist.append(num)
+                    
+                    
+        self.extract_frames(source, croplist, "highlight.mp4")
         print("The highlight video is now available on the web video display panel.") 
-
 
         print('execution complete')
 
 
-####Program Execution which needs to be moved to a separate file
+# def parse_opt():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('--source', type=str, default=ROOT / 'video1.mp4', help='file/dir/URL/glob/screen/0(webcam)')
+#     opt = parser.parse_args()
+#     #opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
+#     print_args(vars(opt))
+#     return opt
 
-def parse_opt():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
-    opt = parser.parse_args()
-    #opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
-    print_args(vars(opt))
-    return opt
+# def main(opt):
+#     check_requirements(exclude=('tensorboard', 'thop'))
+#     vp = video_process()
+#     vp.run(**vars(opt))
 
-def main(opt):
-    check_requirements(exclude=('tensorboard', 'thop'))
-    vp = video_process()
-    vp.run(**vars(opt))
-
-if __name__ == '__main__':
-    opt = parse_opt()
-    main(opt)
-
-
-
-# def process_frame(frame):
-#     # Assuming frame is a single frame of the video
-
-#     # Split the frame into a 3x3 grid
-#     rows = len(frame)
-#     cols = len(frame[0])
-#     box_rows = rows // 3
-#     box_cols = cols // 3
-
-#     for i in range(3):
-#         for j in range(3):
-#             # Get the box coordinates
-#             box_row_start = i * box_rows
-#             box_row_end = box_row_start + box_rows
-#             box_col_start = j * box_cols
-#             box_col_end = box_col_start + box_cols
-
-#             # Apply object detection only on first two columns of the last row
-#             if i == 2 and j < 2:
-#                 box = frame[box_row_start:box_row_end, box_col_start:box_col_end]
-#                 model1(box)
+# if __name__ == '__main__':
+#     opt = parse_opt()
+#     main(opt)

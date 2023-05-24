@@ -267,39 +267,21 @@ class LoadScreenshots:
 
 class LoadCroppedImage:
     # YOLOv5 screenshot dataloader, i.e. `python detect.py --source "screen 0 100 100 512 256"`
-    def __init__(self, source, img_size=640, stride=32, auto=True, transforms=None):
-        # source = [screen_number left top width height] (pixels)
-        check_requirements('mss')
-        import mss
+    def __init__(self, path, img_size=640, stride=32, auto=True, transforms=None):
 
-        source, *params = source.split()
-        self.screen, left, top, width, height = 0, None, None, None, None  # default to full screen 0
-        if len(params) == 1:
-            self.screen = int(params[0])
-        elif len(params) == 4:
-            left, top, width, height = (int(x) for x in params)
-        elif len(params) == 5:
-            self.screen, left, top, width, height = (int(x) for x in params)
+        self.path = path
         self.img_size = img_size
         self.stride = stride
-        self.transforms = transforms
+        self.mode = 'image'
         self.auto = auto
-        self.mode = 'stream'
-        self.frame = 0
-        self.sct = mss.mss()
+        self.transforms = transforms  # optional
 
-        # Parse monitor shape
-        monitor = self.sct.monitors[self.screen]
-        self.top = monitor['top'] if top is None else (monitor['top'] + top)
-        self.left = monitor['left'] if left is None else (monitor['left'] + left)
-        self.width = width or monitor['width']
-        self.height = height or monitor['height']
-        self.monitor = {'left': self.left, 'top': self.top, 'width': self.width, 'height': self.height}
 
     def get_results(self):
-        # mss screen capture: get raw pixels from the screen as np array
-        im0 = np.array(self.sct.grab(self.monitor))[:, :, :3]  # [:, :, :3] BGRA to BGR
-        s = f'screen {self.screen} (LTWH): {self.left},{self.top},{self.width},{self.height}: '
+        # Read image
+        im0 = cv2.imread(self.path)  # BGR
+        assert im0 is not None, f'Image Not Found {self.path}'
+        s = ""
 
         if self.transforms:
             im = self.transforms(im0)  # transforms
@@ -307,8 +289,8 @@ class LoadCroppedImage:
             im = letterbox(im0, self.img_size, stride=self.stride, auto=self.auto)[0]  # padded resize
             im = im.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
             im = np.ascontiguousarray(im)  # contiguous
-        self.frame += 1
-        return str(self.screen), im, im0, None, s  # screen, img, original img, im0s, s
+
+        return self.path, im, im0, None, s
 
 
 class LoadImages:

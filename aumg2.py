@@ -234,21 +234,33 @@ class video_process():
     def extract_frames(self, video_path, frame_numbers, output_path):
         frame_numbers = set(frame_numbers)
         frame_numbers = sorted(frame_numbers)
-        print (frame_numbers)
+        
         cap = cv2.VideoCapture(video_path)
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        
+        for i in len(frame_numbers):
+            frame_numbers[i] = int(frame_numbers[i]* frame_count)
+
+        crop_list = []
+
+        for number in frame_numbers:
+            for num in range(number - 240, number+240):
+                if num >= 0:
+                    crop_list.append(num)
+
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
-        frame_count = 0
+        frame_c = 0
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
 
-            frame_count += 1
-            if frame_count in frame_numbers:
+            frame_c += 1
+            if frame_c in crop_list:
                 out.write(frame)
 
         cap.release()
@@ -301,25 +313,14 @@ class video_process():
                         d_runs, d_wic = readandreturn(results[0])
                         detected = change_detect(d_runs,d_wic)
                         if detected:
-                            framelist.append(count)
-                            print(count)
+                            framelist.append(count/len(dataset))
             count = count + 1
         # Create a new folder for the short clips
         if not os.path.exists("video_shot"):
             os.mkdir("video_shot")
-            
-        croplist = []
-
-        for number in framelist:
-            print(f"number{number}")
-            print(f"datasetlenghtoutside{len(dataset)}")
-            for num in range(max(0, number - 240), min(len(dataset), number + 241)):
-                print(f"datasetlenghtoutside{len(dataset)}")
-                croplist.append(num)
-                cv2.imwrite(f"crop{len(croplist)}.jpg", frame)
-                print(croplist)
                     
-        self.extract_frames(source, croplist, "highlight.mp4")
+                    
+        self.extract_frames(source, framelist, "highlight.mp4")
         print("The highlight video is now available on the web video display panel.") 
 
         print('execution complete')
@@ -341,3 +342,4 @@ class video_process():
 # if __name__ == '__main__':
 #     opt = parse_opt()
 #     main(opt)
+

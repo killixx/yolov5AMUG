@@ -313,7 +313,7 @@ class video_process():
         for number in framelist:
             print(f"number{number}")
             print(f"datasetlenghtoutside{len(dataset)}")
-            for num in range(max(0, number - 240), min(len(dataset), number + 241)):
+            for num in range(max(0, number - 240), min(count, number + 241)):
                 print(f"datasetlenghtoutside{len(dataset)}")
                 croplist.append(num)
                 cv2.imwrite(f"crop{len(croplist)}.jpg", frame)

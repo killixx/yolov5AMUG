@@ -232,13 +232,27 @@ class video_process():
     video_path=""
     
     def extract_frames(self, video_path, frame_numbers, output_path):
-        frame_numbers = set(frame_numbers)
-        frame_numbers = sorted(frame_numbers)
         print (frame_numbers)
         cap = cv2.VideoCapture(video_path)
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = cap.get(cv2.CAP_PROP_FPS)
+        
+        croplist = []
+
+        for number in frame_numbers:
+            print(f"number{number}")
+            print(f"datasetlenghtoutside{len(dataset)}")
+            for num in range(max(0, number - (fps*7)), min(frame_count, number + ((fps*7)+1))):
+                print(f"datasetlenghtoutside{len(dataset)}")
+                croplist.append(num)
+                print(croplist)
+                
+                
+        frame_numbers = set(croplist)
+        frame_numbers = sorted(frame_numbers)
+        
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
         frame_count = 0
@@ -276,7 +290,7 @@ class video_process():
         if screenshot:
             dataset = LoadScreenshots(source, img_size=imgsz1, stride=stride1, auto=pt1)
         else:
-            dataset = LoadImages(source, img_size=imgsz1, stride=stride1, auto=pt1, vid_stride=30)#30fps
+            dataset = LoadImages(source, img_size=imgsz1, stride=stride1, auto=pt1, vid_stride=1)#30fps
         
         count = 0
         framelist = []
@@ -307,19 +321,9 @@ class video_process():
         # Create a new folder for the short clips
         if not os.path.exists("video_shot"):
             os.mkdir("video_shot")
-            
-        croplist = []
-
-        for number in framelist:
-            print(f"number{number}")
-            print(f"datasetlenghtoutside{len(dataset)}")
-            for num in range(max(0, number - 240), min(count, number + 241)):
-                print(f"datasetlenghtoutside{len(dataset)}")
-                croplist.append(num)
-                cv2.imwrite(f"crop{len(croplist)}.jpg", frame)
-                print(croplist)
+        
                     
-        self.extract_frames(source, croplist, "highlight.mp4")
+        self.extract_frames(source, framelist, "highlight.mp4")
         print("The highlight video is now available on the web video display panel.") 
 
         print('execution complete')
